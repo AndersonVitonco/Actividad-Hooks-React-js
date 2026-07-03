@@ -1,5 +1,4 @@
-import React, { createContext, useContext } from 'react';
-import useLocalStorage from './useLocalStorage';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 const ThemeContext = createContext();
 
@@ -12,7 +11,21 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider = ({ children }) => {
-  const [tema, setTema] = useLocalStorage('tema', 'claro');
+  const [tema, setTema] = useState('claro');
+
+  useEffect(() => {
+    // aquí cargamos el tema guardado al iniciar
+    const temaGuardado = localStorage.getItem('tema');
+
+    if (temaGuardado) {
+      setTema(temaGuardado);
+    }
+  }, []);
+
+  useEffect(() => {
+    // aquí guardamos el tema en localStorage
+    localStorage.setItem('tema', tema);
+  }, [tema]);
 
   const toggleTema = () => {
     setTema((prev) => (prev === 'claro' ? 'oscuro' : 'claro'));
