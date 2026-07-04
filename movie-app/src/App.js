@@ -1,19 +1,8 @@
-import React, { useReducer, useEffect, useCallback, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useReducer, useState, useCallback } from 'react';
 import MovieSearch from './MovieSearch';
 import { useTheme } from './ThemeContext';
-import movieReducer, { SET_MOVIES } from './movieReducer';
+import movieReducer, { SET_LOADING, SET_MOVIES } from './movieReducer';
 import useLocalStorage from './useLocalStorage';
-
-const moviesFake = [
-  { id: 1, titulo: 'El Padrino', anio: 1972, genero: 'Crimen' },
-  { id: 2, titulo: 'Interestelar', anio: 2014, genero: 'Ciencia Ficción' },
-  { id: 3, titulo: 'Toy Story', anio: 1995, genero: 'Comedia' },
-  { id: 4, titulo: 'Volver al Futuro', anio: 1985, genero: 'Ciencia Ficción' },
-  { id: 5, titulo: 'Pulp Fiction', anio: 1994, genero: 'Crimen' },
-  { id: 6, titulo: 'El Señor de los Anillos', anio: 2001, genero: 'Fantasía' },
-  { id: 7, titulo: 'Matrix', anio: 1999, genero: 'Acción' },
-  { id: 8, titulo: 'Forrest Gump', anio: 1994, genero: 'Drama' },
-];
 
 const initialState = {
   movies: [],
@@ -22,14 +11,11 @@ const initialState = {
 
 const genreOptions = [
   '',
+  'Acción',
   'Drama',
   'Fantasía',
-  'Crimen',
-  'Comedia',
   'Ciencia Ficción',
-  'Acción',
-  'Animación',
-  'Romance',
+  'Comedia',
 ];
 
 function App() {
@@ -40,76 +26,59 @@ function App() {
   const [verFavoritos, setVerFavoritos] = useState(false);
   const [termino, setTermino] = useState('');
 
+  // Buscamos en OMDb cada vez que cambia el término escrito.
   useEffect(() => {
-    const buscarPeliculas = async () => {
-      const texto = termino.trim();
+    if (termino.trim() === '') {
+      dispatch({ type: SET_MOVIES, payload: [] });
+      return;
+    }
 
-      if (texto === '') {
-        dispatch({ type: SET_MOVIES, payload: [] });
-        return;
-      }
-
-      dispatch({ type: 'SET_LOADING', payload: true });
-
-      // aquí va tu API key de OMDB
-      const apiKey = process.env.REACT_APP_OMDB_API_KEY;
-
-      if (!apiKey) {
-        // si todavía no hay key, usamos datos simples para que la app siga funcionando
-        const resultadosLocales = moviesFake.filter((movie) =>
-          movie.titulo.toLowerCase().includes(texto.toLowerCase())
-        );
-
-        setTimeout(() => {
-          dispatch({ type: SET_MOVIES, payload: resultadosLocales });
-        }, 400);
-
-        return;
-      }
+    const consultarPeliculas = async () => {
+      dispatch({ type: SET_LOADING, payload: true });
 
       try {
         const respuesta = await fetch(
-          `https://www.omdbapi.com/?apikey=${apiKey}&s=${encodeURIComponent(texto)}`
+          `https://www.omdbapi.com/?apikey=833075c7&s=${encodeURIComponent(termino)}`
         );
         const datos = await respuesta.json();
 
-        if (!datos.Search) {
+        if (datos.Search) {
+          const peliculasConGenero = await Promise.all(
+            datos.Search.map(async (pelicula) => {
+              const respuestaDetalle = await fetch(
+                `https://www.omdbapi.com/?apikey=833075c7&i=${pelicula.imdbID}`
+              );
+              const detalle = await respuestaDetalle.json();
+
+              return {
+                id: pelicula.imdbID,
+                titulo: pelicula.Title,
+                anio: pelicula.Year,
+                genero: detalle.Genre || 'Sin género',
+              };
+            })
+          );
+
+          dispatch({ type: SET_MOVIES, payload: peliculasConGenero });
+        } else {
           dispatch({ type: SET_MOVIES, payload: [] });
-          return;
         }
-
-        const resultados = await Promise.all(
-          datos.Search.map(async (item) => {
-            const detalleResponse = await fetch(
-              `https://www.omdbapi.com/?apikey=${apiKey}&i=${item.imdbID}`
-            );
-            const detalle = await detalleResponse.json();
-
-            return {
-              id: item.imdbID,
-              titulo: item.Title,
-              anio: item.Year,
-              genero: detalle.Genre || item.Type,
-            };
-          })
-        );
-
-        dispatch({ type: SET_MOVIES, payload: resultados });
       } catch {
         dispatch({ type: SET_MOVIES, payload: [] });
       }
     };
 
-    buscarPeliculas();
+    consultarPeliculas();
   }, [termino]);
 
-  const handleSearch = useCallback((texto) => {
-    setTermino(texto);
+  // Recibimos el texto que escribe el usuario desde MovieSearch.
+  const handleSearch = useCallback((nuevoTermino) => {
+    setTermino(nuevoTermino);
   }, []);
 
+  // Guardamos y quitamos favoritos con una lista de IDs.
   const handleToggleFavorite = useCallback(
     (id) => {
-      // aquí marcamos o desmarcamos una película como favorita
       setFavoritos((prev) =>
         prev.includes(id)
           ? prev.filter((favoriteId) => favoriteId !== id)
@@ -124,12 +93,10 @@ function App() {
       return state.movies;
     }
 
-    // aquí filtramos por género
     return state.movies.filter((movie) => movie.genero === genero);
   }, [genero, state.movies]);
 
   const soloFavoritos = useMemo(() => {
-    // aquí nos quedamos solo con las favoritas
     return peliculasFiltradas.filter((movie) => favoritos.includes(movie.id));
   }, [favoritos, peliculasFiltradas]);
 
@@ -219,7 +186,7 @@ function App() {
           style={toggleFavoritosStyle}
           onClick={() => setVerFavoritos((prev) => !prev)}
         >
-          {verFavoritos ? 'Ver todos' : 'Ver solo favoritos'}
+          {verFavoritos ? 'Mostrar todos' : 'Mostrar solo favoritos'}
         </button>
         <p style={{ margin: 0 }}>
           Favoritos: {favoritesCount}{' '}

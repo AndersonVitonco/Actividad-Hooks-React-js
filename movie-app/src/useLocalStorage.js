@@ -5,6 +5,7 @@ function readStoredValue(key, initialValue) {
     return initialValue;
   }
 
+  // Intentamos leer el valor guardado en el navegador.
   try {
     const savedValue = window.localStorage.getItem(key);
     return savedValue ? JSON.parse(savedValue) : initialValue;
@@ -16,6 +17,7 @@ function readStoredValue(key, initialValue) {
 function useLocalStorage(key, initialValue) {
   const [value, setValue] = useState(() => readStoredValue(key, initialValue));
 
+  // Cada vez que cambia el valor, lo guardamos.
   useEffect(() => {
     try {
       window.localStorage.setItem(key, JSON.stringify(value));

@@ -4,6 +4,7 @@ import { useTheme } from './ThemeContext';
 
 const MovieSearch = ({ movies, loading, onSearch, onToggleFavorite, favoritos }) => {
   const [busqueda, setBusqueda] = useState('');
+  const [genero, setGenero] = useState('');
   const inputRef = useRef(null);
   const timeoutRef = useRef(null);
   const { colores } = useTheme();
@@ -24,6 +25,11 @@ const MovieSearch = ({ movies, loading, onSearch, onToggleFavorite, favoritos })
       onSearch(valor);
     }, 300);
   };
+
+  // Filtramos por género desde este componente para que la práctica quede simple.
+  const peliculasFiltradas = genero
+    ? movies.filter((movie) => movie.genero.includes(genero))
+    : movies;
 
   useEffect(() => {
     return () => {
@@ -47,6 +53,25 @@ const MovieSearch = ({ movies, loading, onSearch, onToggleFavorite, favoritos })
 
   return (
     <div>
+      <select
+        value={genero}
+        onChange={(e) => setGenero(e.target.value)}
+        style={{
+          width: '100%',
+          padding: '10px',
+          marginBottom: '12px',
+          borderRadius: '6px',
+          border: `1px solid ${colores.inputBorde}`,
+          backgroundColor: colores.inputFondo,
+          color: colores.texto,
+        }}
+      >
+        <option value="">Todos</option>
+        <option value="Action">Acción</option>
+        <option value="Drama">Drama</option>
+        <option value="Fantasy">Fantasía</option>
+        <option value="Sci-Fi">Ciencia Ficción</option>
+      </select>
       <input
         ref={inputRef}
         type="text"
@@ -62,7 +87,7 @@ const MovieSearch = ({ movies, loading, onSearch, onToggleFavorite, favoritos })
       {!loading && movies.length === 0 && busqueda === '' && (
         <p style={{ color: colores.texto }}>Escribe algo para buscar películas.</p>
       )}
-      {movies.map((movie) => (
+      {peliculasFiltradas.map((movie) => (
         <MovieCard
           key={movie.id}
           movie={movie}
