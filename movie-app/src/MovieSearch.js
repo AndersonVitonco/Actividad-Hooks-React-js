@@ -1,102 +1,83 @@
-import React, { useState, useRef, useEffect } from 'react';
+// Componente de busqueda con debounce
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import MovieCard from './MovieCard';
 import { useTheme } from './ThemeContext';
 
-const MovieSearch = ({ movies, loading, onSearch, onToggleFavorite, favoritos }) => {
-  const [busqueda, setBusqueda] = useState('');
-  const [genero, setGenero] = useState('');
+function MovieSearch({ onSearch, movies, loading, favorites, onToggleFavorite }) {
+  const [termino, setTermino] = useState('');
   const inputRef = useRef(null);
   const timeoutRef = useRef(null);
-  const { colores } = useTheme();
+  const { tema } = useTheme();
 
+  // Enfocar el input al cargar el componente
   useEffect(() => {
     inputRef.current.focus();
   }, []);
 
-  const handleChange = (e) => {
-    const valor = e.target.value;
-    setBusqueda(valor);
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+  // Debounce: espera 300ms antes de buscar
+  const handleSearch = useCallback((value) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
     timeoutRef.current = setTimeout(() => {
-      onSearch(valor);
+      onSearch(value);
     }, 300);
+  }, [onSearch]);
+
+  const onChange = (e) => {
+    const val = e.target.value;
+    setTermino(val);
+    handleSearch(val);
   };
 
-  // Filtramos por género desde este componente para que la práctica quede simple.
-  const peliculasFiltradas = genero
-    ? movies.filter((movie) => movie.genero.includes(genero))
-    : movies;
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  const inputStyle = {
-    width: '100%',
-    padding: '12px',
-    fontSize: '16px',
-    border: `1px solid ${colores.inputBorde}`,
-    borderRadius: '6px',
-    backgroundColor: colores.inputFondo,
-    color: colores.texto,
-    boxSizing: 'border-box',
-    marginBottom: '20px',
-  };
+  const fondoInput = tema === 'oscuro' ? '#444' : '#fff';
+  const colorTexto = tema === 'oscuro' ? '#eee' : '#111';
+  const colorBorde = tema === 'oscuro' ? '#666' : '#ccc';
 
   return (
     <div>
-      <select
-        value={genero}
-        onChange={(e) => setGenero(e.target.value)}
-        style={{
-          width: '100%',
-          padding: '10px',
-          marginBottom: '12px',
-          borderRadius: '6px',
-          border: `1px solid ${colores.inputBorde}`,
-          backgroundColor: colores.inputFondo,
-          color: colores.texto,
-        }}
-      >
-        <option value="">Todos</option>
-        <option value="Action">Acción</option>
-        <option value="Drama">Drama</option>
-        <option value="Fantasy">Fantasía</option>
-        <option value="Sci-Fi">Ciencia Ficción</option>
-      </select>
       <input
         ref={inputRef}
         type="text"
+        value={termino}
+        onChange={onChange}
         placeholder="Buscar película..."
-        value={busqueda}
-        onChange={handleChange}
-        style={inputStyle}
+        style={{
+          width: '100%',
+          padding: '10px',
+          fontSize: '16px',
+          borderRadius: '6px',
+          border: `1px solid ${colorBorde}`,
+          background: fondoInput,
+          color: colorTexto,
+          boxSizing: 'border-box',
+          marginBottom: '15px',
+        }}
       />
-      {loading && <p style={{ color: colores.texto }}>Cargando...</p>}
-      {!loading && movies.length === 0 && busqueda !== '' && (
-        <p style={{ color: colores.texto }}>No se encontraron películas.</p>
+
+      {loading && <p style={{ color: colorTexto }}>Cargando...</p>}
+
+      {/* Mostrar mensaje si no hay resultados */}
+      {!loading && termino && movies.length === 0 && (
+        <p style={{ color: colorTexto }}>No se encontraron películas.</p>
       )}
-      {!loading && movies.length === 0 && busqueda === '' && (
-        <p style={{ color: colores.texto }}>Escribe algo para buscar películas.</p>
-      )}
-      {peliculasFiltradas.map((movie) => (
-        <MovieCard
-          key={movie.id}
-          movie={movie}
-          isFavorite={favoritos.includes(movie.id)}
-          onToggleFavorite={onToggleFavorite}
-        />
-      ))}
+
+      {/* Grilla de películas */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+        gap: '12px',
+      }}>
+        {movies.map(pelicula => (
+          <MovieCard
+            key={pelicula.id}
+            pelicula={pelicula}
+            isFavorite={favorites.includes(pelicula.id)}
+            onToggle={onToggleFavorite}
+          />
+        ))}
+      </div>
     </div>
   );
-};
+}
 
 export default MovieSearch;

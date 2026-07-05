@@ -11,5 +11,6 @@ test('renders the movie search app', () => {
 
   expect(screen.getByText(/buscador de películas/i)).toBeInTheDocument();
   expect(screen.getByPlaceholderText(/buscar película/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/género/i)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /oscuro|claro/i })).toBeInTheDocument();
 });
